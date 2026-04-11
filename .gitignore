@@ -1,95 +1,95 @@
-# Misc extensions, system files
-*.zip
-*.txt
-*.gz
-*.out
-*.sh
-*.py
-*.png
-*.ppm
-*.swp
-*~
+# System / temp files
 .DS_Store
+*~
+*.swp
+*.bak
+*.tmp
+*.pyc
+*.pyo
+*.pyd
+__pycache__/
 
-# Build files
-build*/*
+# Build artifacts
+/build*/
 *.o
 *.exe
 *.dmg
 *.dll
 *.a
 *.la
+*.lib
+*.pdb
+*.obj
+*.idb
+*.tlog
+*.lastbuildstate
+*.unsuccessfulbuild
+*.ilk
+*.log
+*.db
+/Debug/
+/Release/
 
-# Legacy SCons files
-config.log
-*.sconsign.dblite
-*.sconf_temp
-/site_scons/
-/generated/
+# Dependency management
+/node_modules/
+/subprojects/packagecache/
+/subprojects/tpt-libs-prebuilt-*/
 
-# User data
+# IDE/Project files
+/.idea/
+/.vscode/
+/.vs/
+*.sublime-*
+*.project
+*.cproject
+*.settings/
+*.cbp
+*.layout
+*.user
+*.config
+*.creator*
+*.files
+*.includes
+*.kdev4/
+/.kdev4/
+*.xcodeproj/
+*.plist
+*.lproj/
+*.opensdf
+*.sdf
+*.suo
+*.sln
+*.vcxproj*
+*.manifest
+*.manifest.res
+*manifest.rc
+*res.res
+compile_commands.json
+
+# Local overrides / data
+/ignore/
 /stamps/
 /Saves/
 /scripts/
 /recordings/
+/generated/
+/site_scons/
+config.log
+*.sconsign.dblite
+*.sconf_temp
+/font/
+
+# Project-specific generated content
+/docs/wiki/TPT_Markdown_English/*
+!/docs/wiki/TPT_Markdown_English/README.md
+/docs/wiki/*.html
+
+# User data
 *.def
 *.pref
 *.lua
 screenshot_*
 
-# Visual studio
-/Debug/
-/Release/
-/includes/
-*.vcxproj*
-*.user
-*.filter
-*.sln
-*.suo
-*.manifest
-*.manifest.res
-*manifest.rc
-*res.res
-*.idb
-*.obj
-*.tlog
-*.lib
-*.ipch
-*.ilk
-*.log
-*.lastbuildstate
-*.unsuccessfulbuild
-*.pdb
-*.db
-
-# QtCreator / KDevelop
-*.user
-*.config
-*.creator*
-*.cflags
-*.cxxflags
-*.files
-*.includes
-*.kdev4
-/.kdev4
-
-# Other IDEs / misc
-/.idea
-.vscode/
-.vs/
-*.sublime-*
-*.project
-*.cproject
-*.settings
-*.cbp
-*.layout
+# Miscellaneous
 *.gch
-*.pyc
-*.xcodeproj
-*.plist
-*.lproj
-*.opensdf
-*.sdf
-/font/
-compile_commands.json
-ignore/
+.codex

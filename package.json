@@ -1,0 +1,10 @@
+{
+  "name": "the-powder-toy",
+  "private": true,
+  "scripts": {
+    "export:wiki": "node tools/export-wiki-to-markdown.mjs"
+  },
+  "devDependencies": {
+    "playwright-core": "^1.59.1"
+  }
+}
