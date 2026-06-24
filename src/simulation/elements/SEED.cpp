@@ -44,7 +44,7 @@ void Element::Element_SEED()
 	LowTemperature = ITL;
 	LowTemperatureTransition = NT;
 	HighTemperature = 673.15f;
-	HighTemperatureTransition = PT_FIRE;
+	HighTemperatureTransition = PT_FIRE; //@ SEED -> FIRE
 
 	Update = &update;
 	Create = &create;
@@ -63,6 +63,7 @@ static int update(UPDATE_FUNC_ARGS)
 	// Turn into liquid wax under high temperature and pressure
 	if (temp > 320.0f && sim->pv[y/CELL][x/CELL] > 50.0f && sim->rng.chance(1, 150))
 	{
+		//@ SEED -> MWAX
 		sim->create_part(i, x, y, PT_MWAX);
 
 		parts[i].ctype = 0;
@@ -89,7 +90,7 @@ static int update(UPDATE_FUNC_ARGS)
 	// Check if we can grow
 	if (water > 3)
 	{
-		int down = detectDown(sim, x, y); // Down gravity direction
+		int down = Element_PLNT_detectDown(sim, x, y); // Down gravity direction
 
 		// Set a default direction if can't decide using gravity
 		if (down < 0 || down > 7)
@@ -103,6 +104,7 @@ static int update(UPDATE_FUNC_ARGS)
 			if (parts[i].life > 200)
 			{
 				// Start growth
+				//@ SEED -> PLNT
 				sim->part_change_type(i, x, y, PT_PLNT);
 
 				parts[i].ctype &= ~((7 << PLNT_DIR) | (3 << PLNT_PHASE)); // Clear direction and phase
@@ -245,7 +247,7 @@ static void create(ELEMENT_CREATE_FUNC_ARGS)
 {
 	sim->parts[i].ctype = 0b111011'000'00'0;
 
-	int down = detectDown(sim, x, y); // Down gravity direction
+	int down = Element_PLNT_detectDown(sim, x, y); // Down gravity direction
 
 	// Use random down direction if can't decide using gravity
 	if (down < 0 || down > 7)

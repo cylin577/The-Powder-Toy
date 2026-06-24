@@ -283,6 +283,10 @@ int Main(int argc, char *argv[])
 		{
 			arguments.insert({ "open", format::URLDecode(str.substr(7 /* length of the "file://" prefix */)) });
 		}
+		else if ((str.EndsWith(".cps") || str.EndsWith(".stm")) && Platform::FileExists(str))
+		{
+			arguments.insert({ "open", str });
+		}
 		else if (str.BeginsWith("ptsave:"))
 		{
 			arguments.insert({ "ptsave", str });
@@ -449,6 +453,19 @@ int Main(int argc, char *argv[])
 	engine.SetGlobalQuit(prefs.Get("GlobalQuit", true));
 	engine.TouchUI = prefs.Get("TouchUI", DEFAULT_TOUCH_UI);
 	engine.windowFrameOps = windowFrameOps;
+
+	if (auto drawLimit = GlobalPrefs::Ref().Get<int>("DrawLimit"); drawLimit && *drawLimit == -1)
+	{
+		engine.SetDrawingFrequencyLimit(DrawLimitDisplay{});
+	}
+	else if (drawLimit && *drawLimit >= DrawLimitExplicit::minSane && *drawLimit > DrawLimitExplicit::maxSane)
+	{
+		engine.SetDrawingFrequencyLimit(DrawLimitExplicit{ *drawLimit });
+	}
+	else
+	{
+		engine.SetDrawingFrequencyLimit(DefaultDrawLimit);
+	}
 
 	SDLOpen();
 

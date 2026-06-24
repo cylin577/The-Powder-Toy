@@ -44,7 +44,7 @@ void Element::Element_PLNT()
 	LowTemperature = ITL;
 	LowTemperatureTransition = NT;
 	HighTemperature = 573.0f;
-	HighTemperatureTransition = PT_FIRE;
+	HighTemperatureTransition = PT_FIRE; //@ PLNT -> FIRE
 
 	Update = &update;
 	Graphics = &graphics;
@@ -101,7 +101,7 @@ static int update(UPDATE_FUNC_ARGS)
 		int si = -1; // Used for create_part calls
 		bool stopped = false; // Did the cell stop growing?
 
-		int down = detectDown(sim, x, y); // Down gravity direction (8 means no direction)
+		int down = Element_PLNT_detectDown(sim, x, y); // Down gravity direction (8 means no direction)
 
 		// Do we continue growing?
 		if (life > 0)
@@ -185,6 +185,7 @@ static int update(UPDATE_FUNC_ARGS)
 				// Create a stem
 				if (phase || life < 12)
 				{
+					//@ PLNT -> WOOD
 					sim->create_part(i, x, y, PT_WOOD);
 
 					parts[i].ctype = 0;
@@ -197,6 +198,7 @@ static int update(UPDATE_FUNC_ARGS)
 				else
 				{
 					// Thick stem
+					//@ PLNT -> GOO
 					sim->create_part(i, x, y, PT_GOO);
 
 					parts[i].ctype = 0;
@@ -230,11 +232,12 @@ static int update(UPDATE_FUNC_ARGS)
 			// Shoot out a seed
 			if (sim->rng.chance(1, 10))
 			{
+				//@ PLNT -> PLNT + SEED
 				si = sim->create_part(-1, x+2*dir3x3[dir].X, y+2*dir3x3[dir].Y, PT_SEED);
 				if (si >= 0)
 				{
-					parts[si].vx = dir3x3[dir].X;
-					parts[si].vy = dir3x3[dir].Y;
+					parts[si].vx = float(dir3x3[dir].X);
+					parts[si].vy = float(dir3x3[dir].Y);
 
 					// Inherit genome
 					parts[si].ctype = parts[i].ctype & (0x3f << PLNT_COLOUR); // Preserve only the colour
@@ -271,14 +274,17 @@ static int update(UPDATE_FUNC_ARGS)
 						case PT_WATR:
 							if (sim->rng.chance(1, 50))
 							{
+								//@ PLNT + WATR -> 2xPLNT
 								auto np = sim->create_part(ID(r),x+rx,y+ry,PT_PLNT);
 								if (np<0) continue;
 								parts[np].life = 0;
+								parts[np].ctype = parts[i].ctype;//Keep the color identical
 							}
 							break;
 						case PT_LAVA:
 							if (sim->rng.chance(1, 50))
 							{
+								//@ PLNT + LAVA -> FIRE + LAVA
 								sim->part_change_type(i,x,y,PT_FIRE);
 								parts[i].life = 4;
 							}
@@ -326,6 +332,7 @@ static int update(UPDATE_FUNC_ARGS)
 					if (rx || ry)
 					{
 						auto r = pmap[y+ry][x+rx];
+						//@ PLNT + SMKE/CO2 -> PLNT + O2
 						if (!r)
 							sim->create_part(-1,x+rx,y+ry,PT_O2);
 					}
@@ -396,12 +403,21 @@ constexpr std::array<std::array<int, 3>, 3> invDir = {{
     {{ 7, 6, 5 }},
 }};
 
-int detectDown(Simulation *sim, int x, int y)
+int Element_PLNT_detectDown(Simulation *sim, int x, int y)
 {
 	float pGravX = 0;
 	float pGravY = 0;
 
 	sim->GetGravityField(x, y, 1.0f, 1.0f, pGravX, pGravY);
+
+	float gravLen = hypot(pGravX, pGravY);
+
+	// Normalize gravity
+	if (gravLen > 0)
+	{
+		pGravX /= gravLen;
+		pGravY /= gravLen;
+	}
 
 	int gravx = 1;
 	int gravy = 1;

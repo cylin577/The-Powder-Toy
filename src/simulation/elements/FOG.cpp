@@ -33,6 +33,7 @@ void Element::Element_FOG()
 	Description = "Fog, created when an electric current is passed through RIME.";
 
 	Properties = TYPE_GAS|PROP_LIFE_DEC;
+	CarriesTypeIn = 1U << FIELD_CTYPE;
 
 	LowPressure = IPL;
 	LowPressureTransition = NT;
@@ -41,7 +42,7 @@ void Element::Element_FOG()
 	LowTemperature = ITL;
 	LowTemperatureTransition = NT;
 	HighTemperature = 373.15f;
-	HighTemperatureTransition = PT_WTRV;
+	HighTemperatureTransition = PT_WTRV; //@ FOG -> WTRV
 
 	Update = &update;
 }
@@ -59,18 +60,23 @@ static int update(UPDATE_FUNC_ARGS)
 				auto r = pmap[y+ry][x+rx];
 				if (!r)
 					continue;
-				if ((elements[TYP(r)].Properties&TYPE_SOLID) && sim->rng.chance(1, 10) && parts[i].life==0 && !(TYP(r)==PT_CLNE || TYP(r)==PT_PCLN)) // TODO: should this also exclude BCLN?
+				if ((elements[TYP(r)].Properties&TYPE_SOLID) && sim->rng.chance(1, 10) && parts[i].life==0 && !(TYP(r)==PT_CLNE || TYP(r)==PT_PCLN || TYP(r)==PT_BCLN || TYP(r)==PT_PBCN))
 				{
+					//@ FOG -> RIME
 					sim->part_change_type(i,x,y,PT_RIME);
 				}
 				if (TYP(r)==PT_SPRK)
 				{
 					parts[i].life += sim->rng.between(0, 19);
 				}
+				// GAS increases acidity
 				if (TYP(r) == PT_GAS && parts[i].tmp < 10)
 				{
 					sim->kill_part(ID(r));
-					parts[i].tmp++;
+					if (parts[i].ctype == PT_DSTW)
+						parts[i].ctype = 0;
+					else
+						parts[i].tmp++;
 				}
 			}
 		}

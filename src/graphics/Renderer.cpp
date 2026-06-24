@@ -4,7 +4,6 @@
 #include "VideoBuffer.h"
 #include "RasterDrawMethodsImpl.h"
 #include "common/tpt-rand.h"
-#include "common/tpt-compat.h"
 #include "gui/game/RenderPreset.h"
 #include "simulation/Simulation.h"
 #include "simulation/ElementGraphics.h"
@@ -12,8 +11,10 @@
 #include "simulation/Air.h"
 #include "simulation/gravity/Gravity.h"
 #include "simulation/orbitalparts.h"
-#include <cmath>
+#include "simulation/elements/SOAP.h"
 #include <algorithm>
+#include <cmath>
+#include <numbers>
 
 void Renderer::RenderBackground()
 {
@@ -259,10 +260,18 @@ void Renderer::render_parts()
 		for (ny=0; ny<YRES; ny++)
 			for (nx=0; nx<XRES; nx++)
 			{
-				if (ny%(4*gridSize) == 0)
-					BlendPixel({ nx, ny }, 0x646464_rgb .WithAlpha(80));
-				if (nx%(4*gridSize) == 0 && ny%(4*gridSize) != 0)
-					BlendPixel({ nx, ny }, 0x646464_rgb .WithAlpha(80));
+				if (gridCheckerboard)
+				{
+					if ((nx/(4*gridSize) + ny/(4*gridSize))%2)
+						BlendPixel({ nx, ny }, 0x646464_rgb .WithAlpha(80));
+				}
+				else
+				{
+					if (ny%(4*gridSize) == 0)
+						BlendPixel({ nx, ny }, 0x646464_rgb .WithAlpha(80));
+					if (nx%(4*gridSize) == 0 && ny%(4*gridSize) != 0)
+						BlendPixel({ nx, ny }, 0x646464_rgb .WithAlpha(80));
+				}
 			}
 	}
 	stats.foundParticles = 0;
@@ -338,7 +347,7 @@ void Renderer::render_parts()
 				}
 				if((elements[t].Properties & PROP_HOT_GLOW) && sim->parts[i].temp>(elements[t].HighTemperature-800.0f))
 				{
-					auto gradv = TPT_PI_DBL/(2*elements[t].HighTemperature-(elements[t].HighTemperature-800.0f));
+					auto gradv = std::numbers::pi/(2*elements[t].HighTemperature-(elements[t].HighTemperature-800.0f));
 					auto caddress = int((sim->parts[i].temp>elements[t].HighTemperature)?elements[t].HighTemperature-(elements[t].HighTemperature-800.0f):sim->parts[i].temp-(elements[t].HighTemperature-800.0f));
 					colr += int(sin(gradv*caddress) * 226);
 					colg += int(-sin(gradv*caddress*4.55) * 34);
@@ -503,7 +512,12 @@ void Renderer::render_parts()
 					if (t==PT_SOAP)
 					{
 						if ((parts[i].ctype&3) == 3 && parts[i].tmp >= 0 && parts[i].tmp < NPART)
-							BlendLine({ nx, ny }, { int(parts[parts[i].tmp].x+0.5f), int(parts[parts[i].tmp].y+0.5f) }, RGBA(colr, colg, colb, cola));
+						{
+							auto dx = parts[parts[i].tmp].x - nx;
+							auto dy = parts[parts[i].tmp].y - ny;
+							Element_SOAP_neighourLoop(dx, dy);
+							BlendLine({ nx, ny }, { int(nx + dx + 0.5f), int(ny + dy + 0.5f) }, RGBA(colr, colg, colb, cola));
+						}
 					}
 				}
 				if(pixel_mode & PSPEC_STICKMAN)
@@ -767,11 +781,12 @@ void Renderer::render_parts()
 					float drad = 0.0f;
 					float ddist = 0.0f;
 					orbitalparts_get(parts[i].life, parts[i].ctype, orbd, orbl);
-					for (r = 0; r < 4; r++) {
-						ddist = ((float)orbd[r])/16.0f;
-						drad = (TPT_PI_FLT * ((float)orbl[r]) / 180.0f) * TPT_SQRT2_FLT;
-						nxo = (int)(ddist*cos(drad));
-						nyo = (int)(ddist*sin(drad));
+					for (r = 0; r < 4; r++)
+					{
+						ddist = float(orbd[r]) / 16.0f;
+						drad = (float(orbl[r]) * std::numbers::pi_v<float> / 180.0f) * std::numbers::sqrt2_v<float>;
+						nxo = int(ddist * cos(drad));
+						nyo = int(ddist * sin(drad));
 						if (ny+nyo>0 && ny+nyo<YRES && nx+nxo>0 && nx+nxo<XRES && TYP(sim->pmap[ny+nyo][nx+nxo]) != PT_PRTI)
 							AddPixel({ nx+nxo, ny+nyo }, RGBA(colr, colg, colb, 255-orbd[r]));
 					}
@@ -784,11 +799,12 @@ void Renderer::render_parts()
 					float drad = 0.0f;
 					float ddist = 0.0f;
 					orbitalparts_get(parts[i].life, parts[i].ctype, orbd, orbl);
-					for (r = 0; r < 4; r++) {
-						ddist = ((float)orbd[r])/16.0f;
-						drad = (TPT_PI_FLT * ((float)orbl[r]) / 180.0f) * TPT_SQRT2_FLT;
-						nxo = (int)(ddist*cos(drad));
-						nyo = (int)(ddist*sin(drad));
+					for (r = 0; r < 4; r++)
+					{
+						ddist = float(orbd[r]) / 16.0f;
+						drad = (float(orbl[r]) * std::numbers::pi_v<float> / 180.0f) * std::numbers::sqrt2_v<float>;
+						nxo = int(ddist * cos(drad));
+						nyo = int(ddist * sin(drad));
 						if (ny+nyo>0 && ny+nyo<YRES && nx+nxo>0 && nx+nxo<XRES && TYP(sim->pmap[ny+nyo][nx+nxo]) != PT_PRTO)
 							AddPixel({ nx+nxo, ny+nyo }, RGBA(colr, colg, colb, 255-orbd[r]));
 					}
@@ -1438,6 +1454,17 @@ void Renderer::AdjustHdispLimit()
 				visit(p * CELL, hv[p.Y][p.X]);
 			}
 		}
+
+		// min and max will shrink towards new limits slowly, to prevent rapid flashes (but they still expand immediately)
+		float maxGap = stats.hdispLimitMax - autoHdispLimitMax;
+		autoHdispLimitMax = std::max(autoHdispLimitMax, stats.hdispLimitMax - maxGap * 0.05f);
+		float minGap = autoHdispLimitMin - stats.hdispLimitMin;
+		autoHdispLimitMin = std::min(autoHdispLimitMin, stats.hdispLimitMin + minGap * 0.05f);
+
+		// Ensure a 1C gap between min and max to handle odd effects and flashing when there's miniscule temperature gaps
+		autoHdispLimitMax = std::min(MAX_TEMP, std::max(autoHdispLimitMax, autoHdispLimitMin + 1));
+		autoHdispLimitMin = std::max(MIN_TEMP, std::min(autoHdispLimitMin, autoHdispLimitMax - 1));
+
 	}
 	stats.hdispLimitMin = autoHdispLimitMin;
 	stats.hdispLimitMax = autoHdispLimitMax;

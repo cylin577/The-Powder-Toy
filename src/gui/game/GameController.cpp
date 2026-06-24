@@ -20,6 +20,7 @@
 #include "client/Client.h"
 #include "client/GameSave.h"
 #include "common/platform/Platform.h"
+#include "common/Defer.h"
 #include "debug/DebugInfo.h"
 #include "debug/DebugLines.h"
 #include "debug/DebugParts.h"
@@ -91,6 +92,19 @@ GameController::GameController():
 	gameModel->AddObserver(gameView);
 
 	gameView->SetDebugHUD(GlobalPrefs::Ref().Get("Renderer.DebugMode", false));
+
+	if (auto fpsLimit = GlobalPrefs::Ref().Get<float>("FpsLimit"); fpsLimit && *fpsLimit == 2)
+	{
+		gameView->SetSimFpsLimit(FpsLimitNone{});
+	}
+	else if (fpsLimit && *fpsLimit >= FpsLimitExplicit::minSane && *fpsLimit <= FpsLimitExplicit::maxSane)
+	{
+		gameView->SetSimFpsLimit(FpsLimitExplicit{ *fpsLimit });
+	}
+	else
+	{
+		gameView->SetSimFpsLimit(DefaultFpsLimit);
+	}
 
 	commandInterface = CommandInterface::Create(this, gameModel);
 
@@ -756,6 +770,7 @@ void GameController::Blur()
 	// Tell lua that mouse is up (even if it really isn't)
 	MouseUp(0, 0, 0, mouseUpBlur);
 	commandInterface->HandleEvent(BlurEvent{});
+	gameModel->frameTime.reset();
 }
 
 void GameController::Exit()
@@ -883,6 +898,21 @@ void GameController::LoadRenderPreset(int presetNum)
 
 void GameController::Update()
 {
+	if ((debugFlags & DEBUG_FRAMETIME) && !gameModel->frameTime)
+	{
+		gameModel->frameTime = std::make_unique<FrameTime>();
+	}
+	if (!(debugFlags & DEBUG_FRAMETIME) && gameModel->frameTime)
+	{
+		gameModel->frameTime.reset();
+	}
+	gameModel->GetSimulation()->frameTime = gameModel->frameTime.get();
+	Defer removeFrameTime([&]() {
+		gameModel->GetSimulation()->frameTime = nullptr;
+	});
+	FrameTime::Frame frame(gameModel->frameTime.get());
+	FrameTime::Span span(gameModel->frameTime.get(), "GameController::Update");
+
 	auto &sd = SimulationData::CRef();
 	ui::Point pos = gameView->GetMousePosition();
 	gameModel->GetRendererSettings().mousePos = PointTranslate(pos);
@@ -1759,4 +1789,9 @@ void GameController::SetToolIndex(ByteString identifier, std::optional<int> inde
 	{
 		commandInterface->SetToolIndex(identifier, index);
 	}
+}
+
+FrameTime *GameController::GetFrameTime() const
+{
+	return gameModel->frameTime.get();
 }

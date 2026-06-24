@@ -63,12 +63,12 @@ GameModel::GameModel(GameView *newView):
 	edgePressure(0),
 	edgeVelocityX(0),
 	edgeVelocityY(0),
-	vorticityCoeff(0.0f),
+	vorticityCoeff(0.1f),
 	convectionMode(AIRC_BOUSSINESQ),
 	decoSpace(DECOSPACE_SRGB),
 	view(newView)
 {
-	sim = new Simulation();
+	sim = Simulation::Factory();
 	sim->useLuaCallbacks = true;
 	ren = new Renderer();
 
@@ -111,6 +111,7 @@ GameModel::GameModel(GameView *newView):
 
 	rendererSettings.gravityFieldEnabled = prefs.Get("Renderer.GravityField", false);
 	rendererSettings.decorationLevel = prefs.Get("Renderer.Decorations", true) ? RendererSettings::decorationEnabled : RendererSettings::decorationDisabled;
+	rendererSettings.gridCheckerboard = prefs.Get("Renderer.GridCheckerboard", false);
 	threadedRendering = prefs.Get("Renderer.SeparateThread", true);
 
 	//Load config into simulation
@@ -224,6 +225,7 @@ GameModel::~GameModel()
 		prefs.Set("Renderer.DisplayMode", rendererSettings.displayMode);
 		prefs.Set("Renderer.RenderMode", rendererSettings.renderMode);
 		prefs.Set("Renderer.GravityField", rendererSettings.gravityFieldEnabled);
+		prefs.Set("Renderer.GridCheckerboard", rendererSettings.gridCheckerboard);
 		prefs.Set("Renderer.Decorations", GetDecoration());
 		prefs.Set("Renderer.DebugMode", rendererSettings.debugLines); //These two should always be equivalent, even though they are different things
 		prefs.Set("Simulation.NewtonianGravity", bool(sim->grav));
@@ -235,7 +237,7 @@ GameModel::~GameModel()
 		prefs.Set("Decoration.Alpha", (int)colour.Alpha);
 	}
 
-	delete sim;
+	sim.reset();
 	delete ren;
 	//if(activeTools)
 	//	delete[] activeTools;
@@ -929,7 +931,7 @@ void GameModel::SetSaveFile(std::unique_ptr<SaveFile> newSave, bool invertInclud
 
 Simulation * GameModel::GetSimulation()
 {
-	return sim;
+	return sim.get();
 }
 
 Renderer * GameModel::GetRenderer()
@@ -1196,6 +1198,16 @@ void GameModel::ShowGravityGrid(bool showGrid)
 bool GameModel::GetGravityGrid()
 {
 	return rendererSettings.gravityFieldEnabled;
+}
+
+void GameModel::ShowGridCheckerboard(bool enableCheckerboard)
+{
+	rendererSettings.gridCheckerboard = enableCheckerboard;
+}
+
+bool GameModel::GetGridCheckerboard()
+{
+	return rendererSettings.gridCheckerboard;
 }
 
 void GameModel::FrameStep(int frames)
@@ -1674,6 +1686,7 @@ std::optional<CustomGOLData> GameModel::CheckCustomGol(String ruleString, String
 
 void GameModel::UpdateUpTo(int upTo)
 {
+	FrameTime::Span span(frameTime.get(), "GameModel::UpdateUpTo");
 	if (upTo < sim->debug_nextToUpdate)
 	{
 		upTo = NPART;
@@ -1700,6 +1713,7 @@ void GameModel::UpdateUpTo(int upTo)
 
 void GameModel::BeforeSim()
 {
+	FrameTime::Span span(frameTime.get(), "GameModel::BeforeSim");
 	auto willUpdate = IsSimRunning();
 	if (willUpdate)
 	{
@@ -1710,6 +1724,7 @@ void GameModel::BeforeSim()
 
 void GameModel::AfterSim()
 {
+	FrameTime::Span span(frameTime.get(), "GameModel::AfterSim");
 	sim->AfterSim();
 	CommandInterface::Ref().HandleEvent(AfterSimEvent{});
 }

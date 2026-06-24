@@ -5,6 +5,7 @@
 #include "graphics/RendererSettings.h"
 #include "simulation/CustomGOLData.h"
 #include "simulation/SimulationSettings.h"
+#include "simulation/FrameTime.h"
 #include <vector>
 #include <deque>
 #include <memory>
@@ -67,7 +68,7 @@ private:
 	void DeselectTool(ByteString identifier);
 	void InitTools();
 
-	Simulation * sim;
+	std::unique_ptr<Simulation> sim;
 	bool paused = false;
 	int queuedFrames = 0;
 	Renderer * ren;
@@ -266,6 +267,8 @@ public:
 	bool GetNewtonianGrvity();
 	void ShowGravityGrid(bool showGrid);
 	bool GetGravityGrid();
+	void ShowGridCheckerboard(bool enableCheckerboard);
+	bool GetGridCheckerboard();
 	void ClearSimulation();
 	std::vector<Menu*> GetMenuList();
 	std::vector<QuickOption*> GetQuickOptions();
@@ -347,4 +350,6 @@ public:
 	{
 		return !paused || queuedFrames;
 	}
+
+	std::unique_ptr<FrameTime> frameTime;
 };

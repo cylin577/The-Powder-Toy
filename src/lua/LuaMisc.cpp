@@ -236,10 +236,6 @@ static int drawCap(lua_State *L)
 		{
 			lua_pushliteral(L, "display");
 		}
-		else if (std::holds_alternative<DrawLimitNone>(drawLimit))
-		{
-			lua_pushinteger(L, 0);
-		}
 		else
 		{
 			lua_pushinteger(L, std::get<DrawLimitExplicit>(drawLimit).value);
@@ -253,13 +249,8 @@ static int drawCap(lua_State *L)
 		return 0;
 	}
 	int drawcap = luaL_checkinteger(L, 1);
-	if(drawcap < 0)
+	if(drawcap <= 0)
 		return luaL_error(L, "draw cap too small");
-	if (drawcap == 0)
-	{
-		ui::Engine::Ref().SetDrawingFrequencyLimit(DrawLimitNone{});
-		return 0;
-	}
 	ui::Engine::Ref().SetDrawingFrequencyLimit(DrawLimitExplicit{ drawcap });
 	return 0;
 }
@@ -291,6 +282,7 @@ void LuaMisc::Open(lua_State *L)
 	LCONST(DEBUG_SIMHUD);
 	LCONST(DEBUG_RENHUD);
 	LCONST(DEBUG_AIRVEL);
+	LCONST(DEBUG_FRAMETIME);
 #undef LCONST
 	{
 		lua_newtable(L);
