@@ -3,7 +3,7 @@ project('the-powder-toy', 'cpp', version:
 #	                    # A.B.C is the version number shown by meson and by your local builds. note that this version
 #	                    # number is overridden by the tag you push to github, so ghactions builds will show that version
 #	                    # number instead. you can also replace 'the-powder-toy' with your mod's simplified name.
-	'100.0.399', meson_version: '>=0.64.0')
+	'100.1.400', meson_version: '>=0.64.0')
 
 if get_option('prepare')
 	# we're being run by prepare.py in a ghactions workflow only to determine the values of options; exit early
@@ -90,7 +90,7 @@ endif
 tpt_libs_variant = '@0@-@1@-@2@-@3@'.format(host_arch_tlv, host_platform, host_libc, tpt_libs_static)
 tpt_libs_vtag = get_option('tpt_libs_vtag')
 if tpt_libs_vtag == ''
-	tpt_libs_vtag = 'v20251019131007'
+	tpt_libs_vtag = 'v20260821222421'
 endif
 if tpt_libs_static != 'none'
 	if tpt_libs_variant not in [
@@ -184,12 +184,19 @@ endif
 if lua_variant == 'none'
 	lua_dep = []
 elif lua_variant == 'lua5.1' or lua_variant == 'lua5.2'
-	lua_dep = dependency(lua_variant + '-c++', static: is_static, required: false)
-	if not lua_dep.found()
-		if not get_option('workaround_noncpp_lua')
-			error('your system @0@ is not compatible with C++, configure with -Dworkaround_noncpp_lua=true to disable this error'.format(lua_variant))
-		endif
+	workaround_noncpp_lua = get_option('workaround_noncpp_lua')
+	if workaround_noncpp_lua
 		lua_dep = dependency(lua_variant, static: is_static)
+	else
+		lua_dep = dependency(lua_variant + '-c++', static: is_static, required: false)
+		if not lua_dep.found()
+			# grabbing this dependency before displaying the error message ensures that if no lua development package is installed at all,
+			# no confusing error message will be shown that suggests that some package is installed, it's just not compatible with C++
+			lua_dep = dependency(lua_variant, static: is_static)
+			if not workaround_noncpp_lua
+				error('your system @0@ is not compatible with C++, configure with -Dworkaround_noncpp_lua=true to disable this error'.format(lua_variant))
+			endif
+		endif
 	endif
 elif lua_variant == 'luajit'
 	lua_dep = dependency('luajit', static: is_static)
